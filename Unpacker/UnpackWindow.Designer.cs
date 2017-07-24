@@ -47,9 +47,9 @@ namespace Unpacker
 			this.checkLabel4 = new System.Windows.Forms.Label();
 			this.button3 = new System.Windows.Forms.Button();
 			this.button4 = new System.Windows.Forms.Button();
+			this.backgroundWorker = new System.ComponentModel.BackgroundWorker();
 			this.progressBar1 = new Unpacker.ProgressBarText();
 			this.progressBar2 = new Unpacker.ProgressBarText();
-			this.backgroundWorker = new System.ComponentModel.BackgroundWorker();
 			this.SuspendLayout();
 			// 
 			// label1
@@ -384,13 +384,15 @@ namespace Unpacker
 			this.Controls.Add(this.progressBar1);
 			this.Controls.Add(this.progressBar2);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+			this.HelpButton = true;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
 			this.MaximizeBox = false;
 			this.MinimizeBox = false;
 			this.Name = "UnpackWindow";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = " Nintendo DS ROM Unpacker";
+			this.Text = " NDS ROM Unpacker (By HiroTDK)";
+			this.HelpButtonClicked += new System.ComponentModel.CancelEventHandler(this.UnpackWindow_HelpButtonClicked);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

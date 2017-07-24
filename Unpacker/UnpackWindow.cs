@@ -854,5 +854,23 @@ namespace Unpacker
 			progressBar1.Refresh();
 			progressBar2.Refresh();
 		}
+
+		private void UnpackWindow_HelpButtonClicked( object sender, CancelEventArgs e )
+		{
+			DialogResult result = CustomMessageBox.Show(
+							"Created By HiroTDK\n"
+							+ "July 24th, 2017\n"
+							+ "Version 1.0.0\n"
+							+ "http://github.com/HiroTDK/Unpacker/\n\n"
+							+ "NDS ROM Unpacker was created to give a nice GUI to the task of unpacking ROMS, as well as adding some new functionality to the task. "
+							+ "Currently, this unpacker can export all of the system files, unpack Nitro Archives (NARC), and identify a couple dozen file types. "
+							+ "If you have any questions, comments, requests, or issues, you can post them on the GitHub page.",
+							"About NDS ROM Unpacker",
+							525,
+							new List<string>() { },
+							new List<DialogResult>() { });
+
+			e.Cancel = true;
+		}
 	}
 }
