@@ -63,7 +63,14 @@ namespace Unpacker
 
 			int directoryCount = BitConverter.ToUInt16(fntArray, 6);
 			string[] directories = new string[directoryCount];
-			directories[0] = narc.Path + "\\" + narc.Name + ".narc";
+			if ( narc.Name + narc.Extension == "" )
+			{
+				directories[0] = narc.Path;
+			}
+			else
+			{
+				directories[0] = narc.Path + "\\" + narc.Name + narc.Extension;
+			}
 
 			FileNDS[] files = new FileNDS[FilesFAT];
 

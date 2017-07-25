@@ -19,11 +19,17 @@ namespace Unpacker
 
 			this.DoubleBuffered = true;
 
-			backgroundWorker.DoWork += new DoWorkEventHandler(backgroundWorker_DoWork);
-			backgroundWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker_RunWorkerCompleted);
-			backgroundWorker.ProgressChanged += new ProgressChangedEventHandler(backgroundWorker_ProgressChanged);
-			backgroundWorker.WorkerReportsProgress = true;
-			backgroundWorker.WorkerSupportsCancellation = true;
+			romWorker.DoWork += new DoWorkEventHandler(romWorker_DoWork);
+			romWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker_RunWorkerCompleted);
+			romWorker.ProgressChanged += new ProgressChangedEventHandler(backgroundWorker_ProgressChanged);
+			romWorker.WorkerReportsProgress = true;
+			romWorker.WorkerSupportsCancellation = true;
+			
+			narcWorker.DoWork += new DoWorkEventHandler(narcWorker_DoWork);
+			narcWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker_RunWorkerCompleted);
+			narcWorker.ProgressChanged += new ProgressChangedEventHandler(backgroundWorker_ProgressChanged);
+			narcWorker.WorkerReportsProgress = true;
+			narcWorker.WorkerSupportsCancellation = true;
 
 			progressBar1.Maximum = progressBar1.Width;
 			progressBar2.Maximum = progressBar2.Width;
@@ -38,19 +44,19 @@ namespace Unpacker
 			Label l = (Label)sender;
 			switch ( l.Name )
 			{
-				case "checkLabel1":
-					checkBox1.Focus();
-					checkBox1.Checked = !checkBox1.Checked;
+				case "narcCheckBoxLabel":
+					narcCheckBox.Focus();
+					narcCheckBox.Checked = !narcCheckBox.Checked;
 					break;
-				case "checkLabel2":
-					checkBox2.Focus();
-					checkBox2.Checked = !checkBox2.Checked;
+				case "sdatCheckBoxLabel":
+					sdatCheckBox.Focus();
+					sdatCheckBox.Checked = !sdatCheckBox.Checked;
 					break;
-				case "checkLabel3":
+				case "checkpathTitleLabel":
 					checkBox3.Focus();
 					checkBox3.Checked = !checkBox3.Checked;
 					break;
-				case "checkLabel4":
+				case "checkpathButtonLabel":
 					checkBox4.Focus();
 					checkBox4.Checked = !checkBox4.Checked;
 					break;
@@ -62,17 +68,17 @@ namespace Unpacker
 			CheckBox c = (CheckBox)sender;
 			switch ( c.Name )
 			{
-				case "checkBox1":
-					checkLabel1.BackColor = Color.FromArgb(95, 95, 95);
+				case "narcCheckBox":
+					narcCheckBoxLabel.BackColor = Color.FromArgb(95, 95, 95);
 					break;
-				case "checkBox2":
-					checkLabel2.BackColor = Color.FromArgb(95, 95, 95);
+				case "sdatCheckBox":
+					sdatCheckBoxLabel.BackColor = Color.FromArgb(95, 95, 95);
 					break;
 				case "checkBox3":
-					checkLabel3.BackColor = Color.FromArgb(95, 95, 95);
+					checkpathTitleLabel.BackColor = Color.FromArgb(95, 95, 95);
 					break;
 				case "checkBox4":
-					checkLabel4.BackColor = Color.FromArgb(95, 95, 95);
+					checkpathButtonLabel.BackColor = Color.FromArgb(95, 95, 95);
 					break;
 			}
 		}
@@ -82,17 +88,17 @@ namespace Unpacker
 			CheckBox c = (CheckBox)sender;
 			switch ( c.Name )
 			{
-				case "checkBox1":
-					checkLabel1.BackColor = Color.FromArgb(63, 63, 63);
+				case "narcCheckBox":
+					narcCheckBoxLabel.BackColor = Color.FromArgb(63, 63, 63);
 					break;
-				case "checkBox2":
-					checkLabel2.BackColor = Color.FromArgb(63, 63, 63);
+				case "sdatCheckBox":
+					sdatCheckBoxLabel.BackColor = Color.FromArgb(63, 63, 63);
 					break;
 				case "checkBox3":
-					checkLabel3.BackColor = Color.FromArgb(63, 63, 63);
+					checkpathTitleLabel.BackColor = Color.FromArgb(63, 63, 63);
 					break;
 				case "checkBox4":
-					checkLabel4.BackColor = Color.FromArgb(63, 63, 63);
+					checkpathButtonLabel.BackColor = Color.FromArgb(63, 63, 63);
 					break;
 			}
 		}
@@ -119,120 +125,134 @@ namespace Unpacker
 		private string file;
 		private string path;
 		private string folder;
+		private bool isArchive = false;
+		private bool isNARC = true;
 
-		//---- Button action for selection of file. ----\\
-
-		private void button1_Click( object sender, EventArgs e )
-		{
-			//----- Creating the open file dialog box. -----\\
-			
+		private void fileButton_Click( object sender, EventArgs e )
+		{			
 			using ( OpenFileDialog openFileDialog = new OpenFileDialog() )
 			{
-				openFileDialog.Title = "Select a ROM to unpack.";
+				openFileDialog.Title = "Select a file to unpack.";
 				openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 				openFileDialog.RestoreDirectory = true;
-				openFileDialog.Filter = "NDS ROM (*.nds)|*.nds";
+				openFileDialog.Filter = "Supported File Types (*.nds;*.narc)|*.nds;*.narc|Nintendo DS ROM (*.nds)|*.nds|Nitro Archive (.narc)|*.narc";
 				DialogResult result = openFileDialog.ShowDialog();
-
-				//---- Testing the open file dialog result. ----\\
-
+				
 				if ( result != DialogResult.OK )
 				{
-					// Presumption of cancellation.
 					return;
 				}
 
-				byte[] rom;
+				byte[] fileArray;
 
 				if ( openFileDialog.CheckFileExists )
 				{
-					// Tests the select file and reads them to an array.
-					rom = File.ReadAllBytes(openFileDialog.FileName);
+					fileArray = File.ReadAllBytes(openFileDialog.FileName);
+
+					string extension = Path.GetExtension(openFileDialog.FileName);
+					switch ( extension.ToLower() )
+					{
+						case ".nds":
+							isArchive = false;
+							break;
+						case ".narc":
+							isArchive = true;
+							isNARC = true;
+							break;
+						case ".sdat":
+							isArchive = true;
+							isNARC = false;
+							break;
+					}
 				}
 				else
 				{
-					// Presumes an error in choice of file.
 					return;
 				}
 
-				//---- Testing the selected ROM for errors. ----\\
-
-				if ( rom.Length < 136 )
+				if (!isArchive)
 				{
-					result = CustomMessageBox.Show(
-						"This file isn't long enough to define a header."
-							+ " Header size is 4 bytes long and stored at byte 132 (0x84). This file is only "
-							+ rom.Length + " (0x" + rom.Length.ToString("X") + ") bytes long.",
-						"File Length Error",
-						400,
-						new List<string>(),
-						new List<DialogResult>());
-
-					return;
-				}
-
-				using ( MemoryStream memoryStream = new MemoryStream(rom) )
-				{
-					rom = new byte[4];
-					memoryStream.Position = 132;
-					memoryStream.Read(rom, 0, 4);
-					int headerSize = BitConverter.ToInt32(rom, 0);
-
-					if ( headerSize != 16384 )
+					if ( fileArray.Length < 136 )
 					{
 						result = CustomMessageBox.Show(
-							"The 4 bytes at 132 (0x84) indicate that the header size is "
-							+ headerSize + " (0x" + headerSize.ToString("X") + ") bytes long."
-							+ " All known headers are 16384 (0x4000) bytes long,"
-							+ " The header size is either incorrect or the ROM is corrupted."
-							+ " Would you like to proceed anyway?",
-							"Header Size Error",
+							"This file isn't long enough to define a header."
+								+ " Header size is 4 bytes long and stored at byte 132 (0x84). This file is only "
+								+ fileArray.Length + " (0x" + fileArray.Length.ToString("X") + ") bytes long.",
+							"File Length Error",
 							400,
-							new List<string>() { "Yes", "No" },
-							new List<DialogResult>() { DialogResult.Yes, DialogResult.No });
-
-						if ( result != DialogResult.Yes )
-						{
-							return;
-						}
-					}
-
-					if ( memoryStream.Length < headerSize )
-					{
-						result = CustomMessageBox.Show(
-							"The header size defined at 132 (0x84) indicates a header size of "
-							+ headerSize + "(0x" + headerSize.ToString("X") + ") bytes."
-							+ "This file is only " + memoryStream.Length + " (0x" + memoryStream.Length.ToString("X") + ") bytes long.",
-							"Header Size Error",
-							400,
-							new List<string>() { },
-							new List<DialogResult>() { });
+							new List<string>(),
+							new List<DialogResult>());
 
 						return;
 					}
 
-					//----- Creates a preliminary folder name. -----\\
+					using ( MemoryStream memoryStream = new MemoryStream(fileArray) )
+					{
+						fileArray = new byte[4];
+						memoryStream.Position = 132;
+						memoryStream.Read(fileArray, 0, 4);
+						int headerSize = BitConverter.ToInt32(fileArray, 0);
 
-					rom = new byte[16];
-					memoryStream.Position = 0;
-					memoryStream.Read(rom, 0, 16);
+						if ( headerSize != 16384 )
+						{
+							result = CustomMessageBox.Show(
+								"The 4 bytes at 132 (0x84) indicate that the header size is "
+								+ headerSize + " (0x" + headerSize.ToString("X") + ") bytes long."
+								+ " All known headers are 16384 (0x4000) bytes long,"
+								+ " The header size is either incorrect or the ROM is corrupted."
+								+ " Would you like to proceed anyway?",
+								"Header Size Error",
+								400,
+								new List<string>() { "Yes", "No" },
+								new List<DialogResult>() { DialogResult.Yes, DialogResult.No });
 
-					folder = "[" + System.Text.Encoding.UTF8.GetString(rom, 12, 4);
-					folder += "] " + System.Text.Encoding.UTF8.GetString(rom, 0, 10);
+							if ( result != DialogResult.Yes )
+							{
+								return;
+							}
+						}
+
+						if ( memoryStream.Length < headerSize )
+						{
+							result = CustomMessageBox.Show(
+								"The header size defined at 132 (0x84) indicates a header size of "
+								+ headerSize + "(0x" + headerSize.ToString("X") + ") bytes."
+								+ "This file is only " + memoryStream.Length + " (0x" + memoryStream.Length.ToString("X") + ") bytes long.",
+								"Header Size Error",
+								400,
+								new List<string>() { },
+								new List<DialogResult>() { });
+
+							return;
+						}
+
+						//----- Creates a preliminary folder name. -----\\
+
+						fileArray = new byte[16];
+						memoryStream.Position = 0;
+						memoryStream.Read(fileArray, 0, 16);
+
+						folder = "[" + System.Text.Encoding.UTF8.GetString(fileArray, 12, 4);
+						folder += "] " + System.Text.Encoding.UTF8.GetString(fileArray, 0, 10);
+					}
+				}
+				else
+				{
+					folder = "[" + openFileDialog.SafeFileName + "]";
 				}
 
 				this.file = openFileDialog.FileName;
-				this.label2.Text = openFileDialog.SafeFileName;
+				this.fileButtonLabel.Text = openFileDialog.SafeFileName;
 
-				this.button2.Enabled = true;
-				this.label4.Text = "Select a destination.";
-				this.label4.Enabled = true;
+				this.pathButton.Enabled = true;
+				this.pathButtonLabel.Text = "Select a destination.";
+				this.pathButtonLabel.Enabled = true;
 			}
 		}
 
 		//---- Button action for selection of path. ----\\
 
-		private void button2_Click( object sender, EventArgs e )
+		private void pathButton_Click( object sender, EventArgs e )
 		{
 			// For the off-chance of no file selection or file of no size.
 			if ( file == null || file.Length == 0 )
@@ -256,7 +276,7 @@ namespace Unpacker
 			{
 				while ( true )
 				{
-					browser.Description = "Select a location to unpack the ROM."
+					browser.Description = "Select a location to unpack the file."
 						+ " The unpacker will create a new folder, titled \""
 						+ folder + "\", in the selected location."
 						+ " All files will be unpacked into this new folder.";
@@ -273,7 +293,7 @@ namespace Unpacker
 
 					path = browser.SelectedPath;
 
-					if ( !Path.GetFileName(path).StartsWith(folder) )
+					if ( !Path.GetFileName(path).StartsWith(folder))
 					{
 						path += "\\" + folder;
 					}
@@ -353,8 +373,8 @@ namespace Unpacker
 					}
 				}
 
-				label4.Text = path;
-				button3.Enabled = true;
+				pathButtonLabel.Text = path;
+				unpackButton.Enabled = true;
 			}
 		}
 
@@ -363,17 +383,22 @@ namespace Unpacker
 					    ROM Unpacking
 		\*----------------------------------------------*/
 
-		private void button4_Click( object sender, EventArgs e )
+		private void cancelButton_Click( object sender, EventArgs e )
 		{
-			if ( backgroundWorker.IsBusy )
+			if ( romWorker.IsBusy )
 			{
-				backgroundWorker.CancelAsync();
+				romWorker.CancelAsync();
+			}
+
+			if ( narcWorker.IsBusy )
+			{
+				narcWorker.CancelAsync();
 			}
 		}
 
-		private void button3_Click( object sender, EventArgs e )
+		private void unpackButton_Click( object sender, EventArgs e )
 		{
-			if ( backgroundWorker.IsBusy )
+			if ( romWorker.IsBusy )
 			{
 				return;
 			}
@@ -406,25 +431,38 @@ namespace Unpacker
 				return;
 			}
 
-			button1.Enabled = false;
-			button2.Enabled = false;
-			button3.Enabled = false;
-			button4.Enabled = true;
-			label2.Enabled = false;
-			label4.Enabled = false;
-			checkBox1.Enabled = false;
-			checkBox2.Enabled = false;
+			fileButton.Enabled = false;
+			pathButton.Enabled = false;
+			unpackButton.Enabled = false;
+			cancelButton.Enabled = true;
+			fileButtonLabel.Enabled = false;
+			pathButtonLabel.Enabled = false;
+			narcCheckBox.Enabled = false;
+			sdatCheckBox.Enabled = false;
 			checkBox3.Enabled = false;
 			checkBox4.Enabled = false;
-			checkLabel1.Enabled = false;
-			checkLabel2.Enabled = false;
-			checkLabel3.Enabled = false;
-			checkLabel4.Enabled = false;
+			narcCheckBoxLabel.Enabled = false;
+			sdatCheckBoxLabel.Enabled = false;
+			checkpathTitleLabel.Enabled = false;
+			checkpathButtonLabel.Enabled = false;
 
-			backgroundWorker.RunWorkerAsync();
+			if ( !isArchive )
+			{
+				romWorker.RunWorkerAsync();
+			}
+			else if ( isNARC )
+			{
+				narcWorker.RunWorkerAsync();
+			}
+			/*
+			else
+			{
+				sdatWorker.RunWorkerAsync();
+			}
+			*/
 		}
 
-		private void backgroundWorker_DoWork( object sender, DoWorkEventArgs e )
+		private void romWorker_DoWork( object sender, DoWorkEventArgs e )
 		{
 			BackgroundWorker worker = (BackgroundWorker)sender;
 			worker.ReportProgress(0, new Tuple<int, string, int, int>(0, "Reading System Files", 0, 0));
@@ -675,7 +713,7 @@ namespace Unpacker
 						FileNDS file = fileList[i];
 						file.GetExtension(romStream);
 						
-						if ( checkBox1.Checked && file.Extension == ".narc" )
+						if ( narcCheckBox.Checked && file.Extension == ".narc" )
 						{
 							narcList.Add(file);
 							workload++;
@@ -687,7 +725,7 @@ namespace Unpacker
 					
 					worker.ReportProgress(workload, new Tuple<int, string, int, int>(progress, "Reading NARC Files", directoryCount, 0));
 
-					if ( checkBox1.Checked && narcList.Count > 0 )
+					if ( narcCheckBox.Checked && narcList.Count > 0 )
 					{
 						for ( int i = 0; i < narcList.Count; i++ )
 						{
@@ -800,10 +838,11 @@ namespace Unpacker
 						try
 						{
 							Directory.Delete(path, true);
-							button3.Enabled = true;
+							unpackButton.Enabled = true;
 							progressBar1.Value = 0;
 							progressBar1.Text = "Unpacking Cancelled; Files Deleted";
 							progressBar2.Value = 0;
+							progressBar2.Text = "";
 
 						}
 						catch ( Exception exception )
@@ -819,16 +858,20 @@ namespace Unpacker
 								new List<DialogResult>());
 
 							path = "";
-							label4.Text = "";
+							pathButtonLabel.Text = "Select a destination folder.";
+							pathButtonLabel.Enabled = true;
+							pathButton.Enabled = true;
 							progressBar1.Text = "Unpacking Cancelled; Files Not Deleted";
-							progressBar2.Text = ( ( progressBar1.Value * 100 ) / ( progressBar1.Maximum * 100 ) ) + "%";
 							progressBar2.Value = 0;
+							progressBar2.Text = "";
 						}
 					}
 					else
 					{
 						path = "";
-						label4.Text = "";
+						pathButtonLabel.Text = "Select a destination folder.";
+						pathButtonLabel.Enabled = true;
+						pathButton.Enabled = true;
 						progressBar1.Text = "Unpacking Cancelled; Files Not Deleted";
 						progressBar2.Text = ( ( progressBar1.Value * 100 ) / ( progressBar1.Maximum * 100 ) ) + "%";
 						progressBar2.Value = 0;
@@ -837,22 +880,123 @@ namespace Unpacker
 			}
 			else
 			{
+				file = "";
 				path = "";
-				label4.Text = "";
+				fileButtonLabel.Text = "Select a ROM or archive to unpack.";
+				pathButtonLabel.Text = "";
 				progressBar1.Text = "Unpacking Completed";
 				progressBar2.Text = "100%";
 			}
 
-			label2.Enabled = true;
-			label4.Enabled = true;
-			checkBox1.Enabled = true;
-			checkLabel1.Enabled = true;
-			button1.Enabled = true;
-			button2.Enabled = true;
-			button4.Enabled = false;
+			fileButtonLabel.Enabled = true;
+			narcCheckBox.Enabled = true;
+			narcCheckBoxLabel.Enabled = true;
+			fileButton.Enabled = true;
+			cancelButton.Enabled = false;
 
 			progressBar1.Refresh();
 			progressBar2.Refresh();
+		}
+
+		private void narcWorker_DoWork( object sender, DoWorkEventArgs e )
+		{
+			BackgroundWorker worker = (BackgroundWorker)sender;
+			worker.ReportProgress(0, new Tuple<int, string, int, int>(0, "Reading Archive Header", 0, 0));
+
+			if ( !File.Exists(file) )
+			{
+				DialogResult result = CustomMessageBox.Show(
+						"The file that you've specified doesn't exist or has changed locations."
+						+ " Please check the path and file name for any errors and try again.",
+						"File Doesn't Exist",
+						400,
+						new List<string>(),
+						new List<DialogResult>());
+
+				return;
+			};
+
+			if ( worker.CancellationPending )
+			{
+				e.Cancel = true;
+				return;
+			}
+
+			if ( !Directory.Exists(path) )
+			{
+				try
+				{
+					Directory.CreateDirectory(path);
+				}
+				catch ( Exception exception )
+				{
+					DialogResult dialog = CustomMessageBox.Show(
+						exception.Message,
+						exception.GetType().ToString(),
+						400,
+						new List<string>(),
+						new List<DialogResult>());
+
+					return;
+				}
+			}
+
+			if ( worker.CancellationPending )
+			{
+				e.Cancel = true;
+				return;
+			}
+
+			using ( MemoryStream narcStream = new MemoryStream(File.ReadAllBytes(file)) )
+			{
+				using ( BinaryReader narcReader = new BinaryReader(narcStream) )
+				{
+					FileNDS archive = new FileNDS("", path, "", 0, Convert.ToInt32(narcStream.Length));
+					NARC narc = new NARC(narcStream, archive);
+
+					if ( narc.isValid )
+					{
+						int workload = narc.dirList.Count + narc.fileList.Count;
+						worker.ReportProgress(workload, new Tuple<int, string, int, int>(0, "Writing Folder Structure", narc.dirList.Count, 0));
+
+						for ( int i = 1; i < narc.dirList.Count; i++ )
+						{
+							if ( worker.CancellationPending )
+							{
+								e.Cancel = true;
+								return;
+							}
+
+							Directory.CreateDirectory(narc.dirList[i]);
+
+							worker.ReportProgress(workload, new Tuple<int, string, int, int>(i + 1, "Writing Folder Structure", narc.dirList.Count, i + 1));
+						}
+
+						worker.ReportProgress(workload, new Tuple<int, string, int, int>(narc.dirList.Count, "Extracting Files", narc.fileList.Count, 0));
+
+						for ( int i = 0; i < narc.fileList.Count; i++ )
+						{
+							if ( worker.CancellationPending )
+							{
+								e.Cancel = true;
+								return;
+							}
+
+							FileNDS file = narc.fileList[i];
+							narcReader.BaseStream.Position = file.Offset;
+							byte[] image = new byte[file.Length];
+							narcReader.Read(image, 0, file.Length);
+
+							using ( BinaryWriter writer = new BinaryWriter(File.Open(file.Path + "\\" + file.Name + file.Extension, FileMode.Create)) )
+							{
+								writer.Write(image, 0, file.Length);
+							}
+
+							worker.ReportProgress(workload, new Tuple<int, string, int, int>(i + 1 + narc.dirList.Count, "Extracting Files", narc.fileList.Count, i + 1));
+						}
+					}
+				}
+			}
 		}
 
 		private void UnpackWindow_HelpButtonClicked( object sender, CancelEventArgs e )
